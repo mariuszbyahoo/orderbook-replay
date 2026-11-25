@@ -4,7 +4,8 @@ Replay and live view of a real BTCUSDT L2 order book, rendered by hand with Canv
 
 Not a trading system or a latency benchmark of exchange connectivity; the strategy overlay is a deliberately simple, illustrative example.
 
-**Live demo:** https://mariuszbyahoo.github.io/orderbook-replay/
+**Live demo:** https://mariuszbyahoo.github.io/orderbook-replay/ · also embedded in MyHub at
+https://myhub.com.pl/p/orderbook-replay
 
 ![Play, change speed, seek on the timeline, switch to live, stale indicator](docs/demo.gif)
 
