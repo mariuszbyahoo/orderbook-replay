@@ -269,3 +269,14 @@ src/render heatmap, ladder, midchart, timeline, palette, util (hand-written canv
 src/ui     history store, perf stats, freshness
 tests/     Vitest
 ```
+
+## Hosting
+
+The build is static and uses a relative base path, so `dist/` runs under any sub-path.
+
+- **Demo host:** GitHub Pages, at `https://mariuszbyahoo.github.io/orderbook-replay/`. It is deployed
+  by `.github/workflows/pages.yml` on pushes to `main`.
+- **On MyHub:** the page `https://myhub.com.pl/p/orderbook-replay` is a MyHub CMS page with an
+  `embed` section, which renders the demo in a sandboxed iframe. MyHub accepts only allowlisted
+  https embed URLs.
+- **Inside the iframe:** the keyboard shortcuts work once the frame has focus, so click it first.
