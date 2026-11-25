@@ -326,7 +326,14 @@ try {
 } catch {
   /* storage blocked: show it every time */
 }
-if (introWanted && !introSeen) help.showModal();
+// Inside a cross-origin iframe, showModal() moves focus without a user gesture, which the browser
+// blocks and logs as a permissions-policy error. There, open the intro non-modally (setting the
+// attribute runs no focusing steps); Escape and the button still close it.
+const embedded = window.self !== window.top;
+if (introWanted && !introSeen) {
+  if (embedded) help.setAttribute('open', '');
+  else help.showModal();
+}
 help.addEventListener('close', () => {
   try {
     localStorage.setItem(INTRO_KEY, '1');
@@ -350,7 +357,10 @@ document.addEventListener('keydown', (e) => {
   if (tag === 'SELECT' || tag === 'INPUT') {
     if (e.key !== ' ') return;
   }
-  if (help.open) return;
+  if (help.open) {
+    if (e.key === 'Escape') help.close(); // non-modal (embedded) dialogs get no built-in Escape
+    return;
+  }
   let handled = true;
   switch (e.key) {
     case ' ':

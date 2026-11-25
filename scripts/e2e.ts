@@ -7,6 +7,7 @@
  */
 import { chromium, type Page } from 'playwright';
 import { mkdir } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { serve } from './serve';
 
 interface Probe {
@@ -31,6 +32,8 @@ const probe = (p: Page) =>
     };
   });
 
+const embeddedErrorsOk = (e: string[]): boolean => e.length === 0;
+
 const results: { check: string; ok: boolean; detail: string }[] = [];
 const check = (name: string, ok: boolean, detail: string): void => {
   results.push({ check: name, ok, detail });
@@ -46,7 +49,9 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
 try {
   await page.goto('http://127.0.0.1:4175/p/orderbook-replay/');
-  await page.waitForFunction(() => (window as unknown as { __probe: Probe }).__probe.ready, null, { timeout: 60_000 });
+  await page.waitForFunction(() => (window as unknown as { __probe?: Probe }).__probe?.ready, null, {
+    timeout: 60_000,
+  });
   await page.waitForTimeout(300);
   const introOpen = await page.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open);
   await page.keyboard.press('Escape');
@@ -160,7 +165,9 @@ try {
 
   // intro is remembered (localStorage) across reloads
   await page.reload();
-  await page.waitForFunction(() => (window as unknown as { __probe: Probe }).__probe.ready, null, { timeout: 60_000 });
+  await page.waitForFunction(() => (window as unknown as { __probe?: Probe }).__probe?.ready, null, {
+    timeout: 60_000,
+  });
   const introAgain = await page.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open);
   check('intro not shown again after dismissal', !introAgain, `open=${introAgain}`);
 
@@ -178,6 +185,39 @@ try {
   await page.setViewportSize({ width: 1600, height: 1000 });
 
   check('no page errors', errors.length === 0, errors.join(' | ') || 'none');
+
+  // Embedded like on MyHub: cross-origin parent (other port; a non-loopback parent would trip Chrome's local-network check), sandbox="allow-scripts allow-same-origin", fresh storage
+  const ctx2 = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  const host = await ctx2.newPage();
+  const embedErrors: string[] = [];
+  host.on('pageerror', (e) => embedErrors.push(e.message));
+  host.on('console', (m) => m.type() === 'error' && embedErrors.push(m.text()));
+  // a real loopback server for the parent page (Chrome's local-network check blocks synthetic parents)
+  const parentSrv = createServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end(
+      '<!doctype html><iframe src="http://127.0.0.1:4175/p/orderbook-replay/" title="demo" width="1300" height="800" ' +
+        'sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer"></iframe>',
+    );
+  });
+  await new Promise<void>((r) => parentSrv.listen(4180, '127.0.0.1', r));
+  await host.goto('http://127.0.0.1:4180/');
+  const fr = (await (await host.waitForSelector('iframe')).contentFrame())!;
+  await fr.waitForLoadState('load');
+  await fr.waitForFunction(() => (window as unknown as { __probe?: Probe }).__probe?.ready, null, { timeout: 60_000 });
+  const embIntro = await fr.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open);
+  await fr.locator('#helpClose').click();
+  const embClosed = !(await fr.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open));
+  await fr.locator('#bPlay').click();
+  await host.waitForTimeout(1500);
+  const embPlaying = await fr.evaluate(() => (window as unknown as { __probe: Probe }).__probe.frame?.playing ?? false);
+  check(
+    'embedded (cross-origin sandboxed iframe): intro, close button, play, no console errors',
+    embIntro && embClosed && embPlaying && embeddedErrorsOk(embedErrors),
+    `intro=${embIntro} closed=${embClosed} playing=${embPlaying} errors=${embedErrors.join(' | ') || 'none'}`,
+  );
+  await ctx2.close();
+  parentSrv.close();
 } catch (e) {
   check('e2e run', false, String(e));
 } finally {

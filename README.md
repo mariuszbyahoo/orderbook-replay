@@ -20,9 +20,9 @@ Conditions for every row: Apple M4, macOS 26.5, Chromium 159.0.8154.6 (headed), 
 
 | What                              | Result                                                          | Sample                           |
 | --------------------------------- | --------------------------------------------------------------- | -------------------------------- |
-| Frame interval, replay at 100×    | p50 16.7 / p95 17.1 / max 17.8 ms (60.0 fps on a 60 Hz display) | 3601 frames over 60 s            |
-| Main-thread render work per frame | p50 3.2 / p95 4.1 / max 4.1 ms                                  | same run                         |
-| Points per frame                  | p50 349,031, of which 338,400 are heatmap cells                 | same run, 15 min × ±100 USD view |
+| Frame interval, replay at 100×    | p50 16.7 / p95 17.0 / max 17.8 ms (60.0 fps on a 60 Hz display) | 3600 frames over 60 s            |
+| Main-thread render work per frame | p50 2.4 / p95 3.9 / max 3.9 ms                                  | same run                         |
+| Points per frame                  | p50 349,032, of which 338,400 are heatmap cells                 | same run, 15 min × ±100 USD view |
 | Live data age on screen           | p50 347 / p95 481 / max 1354 ms; 0 of 3601 frames stale         | 60 s live, 2026-11-25 14:25 UTC  |
 
 **What "live data age" measures.** At each rendered frame it is:
@@ -247,21 +247,21 @@ here comes from anywhere else.
 | Device   | Apple M4 (10 cores, 16 GB), macOS 26.5                                                                                                                     |
 | Browser  | Chromium (Playwright) 159.0.8154.6, **headed**, 1600×1000 CSS px, DPR 2                                                                                    |
 | Build    | production (`vite build`), served by `scripts/serve.ts` under `/p/orderbook-replay/` (not `vite preview`)                                                  |
-| Run      | 60 s measured after a 2 s warm-up, replay at **100×** from the first snapshot (wraps at the end), 3601 frames, viewport locked (`viewportUnchanged: true`) |
+| Run      | 60 s measured after a 2 s warm-up, replay at **100×** from the first snapshot (wraps at the end), 3600 frames, viewport locked (`viewportUnchanged: true`) |
 | Viewport | 15 min × ±100 USD, i.e. a 900 × 376 cell window of the heatmap raster                                                                                      |
 
 | Metric                                              | p50     | p95     | max     |
 | --------------------------------------------------- | ------- | ------- | ------- |
-| Frame interval (rAF to rAF), ms                     | 16.7    | 17.1    | 17.8    |
-| Render work on the main thread (JS, all layers), ms | 3.2     | 4.1     | 4.1     |
-| Points per frame                                    | 349,031 | 350,310 | 350,774 |
+| Frame interval (rAF to rAF), ms                     | 16.7    | 17.0    | 17.8    |
+| Render work on the main thread (JS, all layers), ms | 2.4     | 3.9     | 3.9     |
+| Points per frame                                    | 349,032 | 350,304 | 350,773 |
 | of which heatmap cells                              | 338,400 | 339,246 | 339,246 |
-| Worker → main message lag, ms                       | 0.1     | 3.3     | 4.7     |
-| Replay events applied per frame                     | 21      | 215     | 965     |
+| Worker → main message lag, ms                       | 0.2     | 3.8     | 5.1     |
+| Replay events applied per frame                     | 20      | 214     | 860     |
 
 Average **60.0 fps**. The display refreshes at 60 Hz, so the frame interval is pinned at about
 16.7 ms; the headroom shows in the render-work row. Per-layer p95 times in ms (main-thread JS) were:
-heatmap base 0.1, overlay 1, axes 0.6, ladder 1.2, mid chart 0.5, timeline 0.2.
+heatmap base 0.1, overlay 1, axes 0.7, ladder 1.2, mid chart 0.5, timeline 0.2.
 
 **How to read these numbers:**
 
@@ -312,7 +312,8 @@ are not stored.
   - no page errors.
 
   The run also checks the first-load intro overlay (shown once, dismissible) and the 390 px layout
-  (desktop note shown, no horizontal scroll). All 17 checks pass. It writes
+  (desktop note shown, no horizontal scroll). It also loads the app in a cross-origin sandboxed iframe, the way MyHub embeds it, and checks that the
+  intro, its close button and playback work there with no console errors. All 19 checks pass. It writes
   `docs/screenshot-replay.png`, `docs/screenshot-stale.png` and `docs/screenshot-390.png`.
 
 ![Stale state: worker stalled for 3 s at 10×](docs/screenshot-stale.png)

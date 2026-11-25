@@ -364,3 +364,13 @@ dialog h3 {
     display: block;
   }
 }
+
+/* intro opened non-modally inside an iframe: float it like the modal version */
+#help[open]:not(:modal) {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  z-index: 10;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6);
+}
