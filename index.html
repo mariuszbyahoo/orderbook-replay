@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Order Book Replay</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <h1>Order Book Replay</h1>
+        <span id="instrument" class="dim">—</span>
+      </div>
+      <div id="clock" class="clock" aria-live="off">—</div>
+      <div id="fresh" class="fresh" role="status" aria-live="polite">loading</div>
+      <label class="live-toggle"><input id="live" type="checkbox" /> Live (Binance)</label>
+    </header>
+
+    <main class="grid">
+      <section class="panel heat" aria-label="Depth heatmap: price by time, liquidity intensity">
+        <div class="panel-title">
+          Depth heatmap
+          <span class="dim"
+            >· 1 s × price bin · blue = bids (solid line), orange = asks (dashed line) · ▲ buy / ▼ sell trades · ◆
+            decisions</span
+          >
+        </div>
+        <div class="stack" id="heatStack">
+          <canvas id="heatBase"></canvas>
+          <canvas id="heatOver"></canvas>
+          <svg id="heatAxes" aria-hidden="true"></svg>
+          <div id="hud" class="hud" aria-label="Performance HUD"></div>
+          <div id="status" class="status"></div>
+        </div>
+      </section>
+
+      <section class="panel ladder" aria-label="Price ladder">
+        <div class="panel-title">Ladder <span class="dim" id="ladderNote"></span></div>
+        <canvas id="ladder"></canvas>
+      </section>
+
+      <section class="panel strat" aria-label="Strategy decisions (illustrative)">
+        <div class="panel-title">Decisions <span class="warn">illustrative only</span></div>
+        <dl id="strat" class="kv"></dl>
+        <p class="dim small">
+          Top-5 level imbalance, EMA-smoothed. Enter long if I &gt; 0.6, short if I &lt; −0.6, exit on sign flip, min
+          hold 3 s, 0.01 BTC, taker fills at the touch. No fees, latency or queue position. A rendering demo, not a
+          strategy.
+        </p>
+      </section>
+
+      <section class="panel mid" aria-label="Mid price and spread with sample counts">
+        <div class="panel-title">
+          Mid &amp; spread <span class="dim">· band = min–max per pixel, line = mean · readout = value, n, limits</span>
+        </div>
+        <canvas id="midChart"></canvas>
+        <pre id="midReadout" class="readout"></pre>
+      </section>
+
+      <section class="panel controls" aria-label="Player controls">
+        <div class="buttons" role="toolbar" aria-label="Playback">
+          <button id="bBack1s" title="Back 1 s (Shift+←)">−1s</button>
+          <button id="bBack100" title="Back 100 ms (←)">−100ms</button>
+          <button id="bBackEv" title="Back one event (,)">−ev</button>
+          <button id="bPlay" class="primary" title="Play/pause (Space)">Play</button>
+          <button id="bFwdEv" title="Forward one event (.)">+ev</button>
+          <button id="bFwd100" title="Forward 100 ms (→)">+100ms</button>
+          <button id="bFwd1s" title="Forward 1 s (Shift+→)">+1s</button>
+          <label
+            >Speed
+            <select id="speed" title="[ and ] change speed">
+              <option>1</option>
+              <option>2</option>
+              <option>5</option>
+              <option selected>10</option>
+              <option>25</option>
+              <option>50</option>
+              <option>100</option></select
+            >×</label
+          >
+          <label><input type="checkbox" id="follow" checked /> Follow (F)</label>
+          <button id="bHelp" title="Keyboard shortcuts (?)">?</button>
+        </div>
+        <canvas
+          id="timeline"
+          tabindex="0"
+          role="slider"
+          aria-label="Timeline scrubber (event density)"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        ></canvas>
+      </section>
+    </main>
+
+    <dialog id="help">
+      <h2>Keyboard</h2>
+      <table>
+        <tr>
+          <td><kbd>Space</kbd></td>
+          <td>play / pause</td>
+        </tr>
+        <tr>
+          <td><kbd>←</kbd> <kbd>→</kbd></td>
+          <td>step 100 ms</td>
+        </tr>
+        <tr>
+          <td><kbd>Shift</kbd>+<kbd>←</kbd> <kbd>→</kbd></td>
+          <td>step 1 s</td>
+        </tr>
+        <tr>
+          <td><kbd>,</kbd> <kbd>.</kbd></td>
+          <td>step one event</td>
+        </tr>
+        <tr>
+          <td><kbd>[</kbd> <kbd>]</kbd></td>
+          <td>speed down / up</td>
+        </tr>
+        <tr>
+          <td><kbd>Home</kbd> <kbd>End</kbd></td>
+          <td>seek start / end</td>
+        </tr>
+        <tr>
+          <td><kbd>+</kbd> <kbd>−</kbd></td>
+          <td>zoom time window</td>
+        </tr>
+        <tr>
+          <td><kbd>Shift</kbd>+<kbd>+</kbd> <kbd>−</kbd></td>
+          <td>zoom price range</td>
+        </tr>
+        <tr>
+          <td><kbd>F</kbd></td>
+          <td>follow playhead</td>
+        </tr>
+        <tr>
+          <td><kbd>L</kbd></td>
+          <td>live mode on / off</td>
+        </tr>
+        <tr>
+          <td><kbd>H</kbd></td>
+          <td>perf HUD on / off</td>
+        </tr>
+      </table>
+      <p class="dim small">Heatmap: wheel = zoom time, Shift+wheel = zoom price, drag = pan.</p>
+      <form method="dialog"><button>Close</button></form>
+    </dialog>
+
+    <footer class="foot dim small" id="foot"></footer>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
