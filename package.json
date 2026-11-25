@@ -16,7 +16,9 @@
     "record": "tsx scripts/record.ts",
     "sample": "tsx scripts/make-sample.ts",
     "bench": "tsx scripts/bench.ts",
-    "e2e": "tsx scripts/e2e.ts"
+    "e2e": "tsx scripts/e2e.ts",
+    "bench:live": "tsx scripts/bench-live.ts",
+    "gif": "tsx scripts/record-gif.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

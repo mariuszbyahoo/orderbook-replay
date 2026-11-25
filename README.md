@@ -1,20 +1,68 @@
 # Order Book Replay
 
-Step through a real BTCUSDT trading session, with L2 order-book data from Binance and a deliberately
-simple strategy's decisions on top. Everything is drawn by hand: Canvas 2D for the dense layers and SVG
-for the axes. No charting library is used.
+Replay and live view of a real BTCUSDT L2 order book, rendered by hand with Canvas 2D + SVG, no charting library.
 
-![Replay, mid-session](docs/screenshot-replay.png)
+Not a trading system or a latency benchmark of exchange connectivity; the strategy overlay is a deliberately simple, illustrative example.
 
-The demo is built to show four things:
+**Live demo:** https://mariuszbyahoo.github.io/orderbook-replay/
 
-- **Dense data visualisation.** A depth heatmap of price × time × liquidity where each frame is one scaled
-  blit of a pre-coloured raster, so the cost per frame does not depend on how many cells are visible.
+![Play, change speed, seek on the timeline, switch to live, stale indicator](docs/demo.gif)
+
+<sub>23 s, recorded with Playwright on the production build. Play at 10× → 50× → seek → live mode → STALE (the
+engine worker is deliberately stalled for 3 s). Recorded with `prefers-reduced-motion`, so the time window
+pages instead of scrolling. That is a real app mode, used here to keep the GIF under 8 MB.</sub>
+
+### Measured
+
+Conditions for every row: Apple M4, macOS 26.5, Chromium 159.0.8154.6 (headed), production build (`vite build`) served statically by `scripts/serve.ts`, 1600×1000 CSS px at DPR 2. Raw data: [`perf/results.json`](perf/results.json),
+[`perf/live.json`](perf/live.json), and every live run on that day in
+[`perf/live-history.json`](perf/live-history.json).
+
+| What                              | Result                                                          | Sample                           |
+| --------------------------------- | --------------------------------------------------------------- | -------------------------------- |
+| Frame interval, replay at 100×    | p50 16.7 / p95 17.1 / max 17.8 ms (60.0 fps on a 60 Hz display) | 3601 frames over 60 s            |
+| Main-thread render work per frame | p50 3.2 / p95 4.1 / max 4.1 ms                                  | same run                         |
+| Points per frame                  | p50 349,031, of which 338,400 are heatmap cells                 | same run, 15 min × ±100 USD view |
+| Live data age on screen           | p50 347 / p95 481 / max 1354 ms; 0 of 3601 frames stale         | 60 s live, 2026-11-25 14:25 UTC  |
+
+**What "live data age" measures.** At each rendered frame it is:
+
+```
+(local clock + offset to Binance server time) − exchange timestamp of the newest applied event
++ wall time since the worker produced the frame
+```
+
+That covers Binance's 100 ms depth batching, network transit from the measuring machine, the error in
+the clock-offset estimate (about ±RTT/2; REST round trip p50 282 ms in that run),
+the browser's WebSocket delivery, and the app's own worker → render hop. **It is not render latency.**
+The app's own share is the worker → rendered frame time: p50 10 / max 20 ms in the same run.
+
+For comparison, a Node process measured the depth stream on its own during the same 60 s and saw an event
+age of p50 255 / p95 305 / max 785 ms. Inside the browser, before rendering, the event
+age was p50 334 / p95 466 / max 1346 ms. The difference sits upstream of the app's
+worker and has not been isolated further.
+
+There were four earlier live runs that day, all kept in `perf/live-history.json`:
+
+- Two had no concurrent baseline and showed p95 values of 2.5 s and 7.7 s.
+- One had a concurrent Node baseline and was normal: app p95 298 ms, 0 stale frames.
+- One was worse than its concurrent baseline: app p95 1,265 ms with 146 stale frames, against a Node
+  p95 of 316 ms. That run predates the stale-cause breakdown, so its cause is unknown.
+
+The connection was unstable that day. Whenever data aged past 1.5 s, the STALE indicator flagged it.
+
+## What it shows
+
+- **Dense data visualisation.** A depth heatmap of price × time × liquidity. Each frame draws it with one
+  scaled `drawImage` of a pre-coloured raster, so the JavaScript work does not grow with the number of
+  visible cells. GPU work does grow with pixels; the measured run above drew about 338k cells per frame
+  at 60 fps.
 - **Replay.** A deterministic replay clock runs in a Web Worker. It supports play/pause, stepping
   (one event / 100 ms / 1 s), seek, and 1×–100× speed.
-- **Measured rendering performance.** A perf HUD runs all the time, and a benchmark mode writes
-  `perf/results.json`. The numbers below come from that file.
-- **Honest under load.** A staleness indicator turns the UI visibly stale instead of passing old data off as current.
+- **Measured rendering performance.** A perf HUD runs all the time; `npm run bench` and
+  `scripts/bench-live.ts` write the files above.
+- **A visible staleness indicator.** The UI turns visibly stale instead of passing old data off as
+  current. This is covered by unit tests and an e2e test that stalls the worker.
 
 ## Quick start
 
@@ -27,6 +75,8 @@ npm run lint       # ESLint + Prettier check
 npm run build      # static output in dist/ (relative base: works under any sub-path)
 npm run e2e        # Playwright checks against dist/ + screenshots into docs/
 npm run bench      # 60 s benchmark at 100x -> perf/results.json
+npm run bench:live # 60 s live data age + concurrent Node baseline -> perf/live.json
+npm run gif        # docs/demo.gif (needs ffmpeg)
 npm run record -- --minutes 45   # record a fresh session from Binance
 npm run sample                   # trim data/session.jsonl.gz -> public/data/sample.jsonl.gz
 ```
@@ -59,7 +109,8 @@ example `npx tsx scripts/serve.ts`, which serves `dist/` at `/p/orderbook-replay
   first diff applied on top of it.
 - **Committed sample** (`public/data/sample.jsonl.gz`): produced by `scripts/make-sample.ts`. It keeps
   only price levels inside one fixed band: the session's traded range ±0.5 %. Diffs carry absolute
-  quantities, so the book inside a fixed band is reconstructed exactly. Levels outside the band are
+  quantities, so within a fixed band the reconstruction does not depend on levels outside it. This follows from
+  the format; it was not separately checked against the untrimmed recording. Levels outside the band are
   simply absent. Depth records keep their `U`/`u` even when no level survives, so the continuity
   checks still run on every event.
 
@@ -126,8 +177,8 @@ The two gaps are both real. Neither was injected:
   use binary search.
 - **The heatmap is a raster, not a list of rectangles.** Each 1-second bucket samples the book once
   when the bucket closes and bins it by price. The worker colour-maps the result into an `ImageBitmap`
-  using an `OffscreenCanvas`. On screen it is one `drawImage` with smoothing turned off. The cost is the
-  same at 30k visible cells and at 300k.
+  using an `OffscreenCanvas`. On screen it is one `drawImage` with smoothing turned off, so the JS cost does not depend on the
+  visible cell count. Only the 338k-cell benchmark view was measured.
 - **No look-ahead.** The replay history is precomputed, but a bucket is drawn only once its close time
   is at or before the playhead. The area to the right of the playhead is hatched, not left blank.
   Trades and decisions are filtered to times at or before the playhead.
@@ -155,7 +206,8 @@ The two gaps are both real. Neither was injected:
 
 ## Accessibility
 
-- **Palette:** Okabe–Ito, which is colour-blind safe. Bids are blue and asks are orange. Colour is never
+- **Palette:** Okabe–Ito, designed to stay distinguishable under common colour-vision deficiencies (not separately
+  tested with a CVD simulator). Bids are blue and asks are orange. Colour is never
   the only channel:
   - Position: bids sit below the mid, asks above.
   - Line style: the best bid is a solid line, the best ask a dashed line.
@@ -185,30 +237,31 @@ The two gaps are both real. Neither was injected:
   price centre jumps only when the mid leaves the middle 60 % of the view. CSS transitions are off.
   The e2e test checks this.
 
-## Measured performance
+## Measured performance (details)
 
 Every number below was measured by `npm run bench` and is stored in `perf/results.json`. No number
 here comes from anywhere else.
 
-|          |                                                                                                              |
-| -------- | ------------------------------------------------------------------------------------------------------------ |
-| Device   | Apple M4 (10 cores, 16 GB), macOS 26.5                                                                       |
-| Browser  | Chromium 159.0.8154.6 (Playwright), **headed**, 1600×1000 CSS px, DPR 2                                      |
-| Run      | 60 s measured after a 2 s warm-up, replay at **100×** from the session start (wraps at the end), 3601 frames |
-| Viewport | 15 min × ±100 USD, i.e. a 900 × 376 cell window of the heatmap raster                                        |
+|          |                                                                                                                                                            |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Device   | Apple M4 (10 cores, 16 GB), macOS 26.5                                                                                                                     |
+| Browser  | Chromium (Playwright) 159.0.8154.6, **headed**, 1600×1000 CSS px, DPR 2                                                                                    |
+| Build    | production (`vite build`), served by `scripts/serve.ts` under `/p/orderbook-replay/` (not `vite preview`)                                                  |
+| Run      | 60 s measured after a 2 s warm-up, replay at **100×** from the first snapshot (wraps at the end), 3601 frames, viewport locked (`viewportUnchanged: true`) |
+| Viewport | 15 min × ±100 USD, i.e. a 900 × 376 cell window of the heatmap raster                                                                                      |
 
 | Metric                                              | p50     | p95     | max     |
 | --------------------------------------------------- | ------- | ------- | ------- |
-| Frame interval (rAF to rAF), ms                     | 16.7    | 17.3    | 17.8    |
-| Render work on the main thread (JS, all layers), ms | 3.1     | 3.4     | 4.1     |
-| Points per frame                                    | 349,028 | 350,315 | 350,773 |
+| Frame interval (rAF to rAF), ms                     | 16.7    | 17.1    | 17.8    |
+| Render work on the main thread (JS, all layers), ms | 3.2     | 4.1     | 4.1     |
+| Points per frame                                    | 349,031 | 350,310 | 350,774 |
 | of which heatmap cells                              | 338,400 | 339,246 | 339,246 |
-| Worker → main message lag, ms                       | 0.0     | 3.2     | 5.0     |
-| Replay events applied per frame                     | 20      | 210     | 1141    |
+| Worker → main message lag, ms                       | 0.1     | 3.3     | 4.7     |
+| Replay events applied per frame                     | 21      | 215     | 965     |
 
 Average **60.0 fps**. The display refreshes at 60 Hz, so the frame interval is pinned at about
-16.7 ms. The headroom shows in the render-work column. Per-layer p95 times in ms (main-thread JS) were:
-heatmap base 0.1, overlay 0.9, axes 0.6, ladder 1.3, mid chart 0.5, timeline 0.2.
+16.7 ms; the headroom shows in the render-work row. Per-layer p95 times in ms (main-thread JS) were:
+heatmap base 0.1, overlay 1, axes 0.6, ladder 1.2, mid chart 0.5, timeline 0.2.
 
 **How to read these numbers:**
 
@@ -222,13 +275,16 @@ heatmap base 0.1, overlay 0.9, axes 0.6, ladder 1.3, mid chart 0.5, timeline 0.2
   clocks agree to within about 1 ms, so readings under 1 ms are at the noise floor.
 - The default 3-minute view was not benchmarked separately. It draws fewer cells (about 27k at this
   window size).
+- Benchmark mode ignores keyboard, wheel and pointer input. One earlier run had its time window zoomed
+  by input on the headed window; the script now rejects any run whose viewport changed.
 
 **What the HUD caught before release.** With every trade drawn as its own triangle, the 15-minute
-view (about 23k trades: 62,715 trades over 41 min) ran at 13–17 fps in headless Chromium across
-two development runs. In the run with per-layer timing, the overlay took 18.5 ms at p50 and 111 ms at p95. The overlay now switches level of detail above 3,000 visible trades: it draws one VWAP
-marker per pixel column per side, sized by volume, and the HUD shows which mode is active. The same
-headless run then reached 60 fps with an overlay p95 of 0.9 ms. The headless numbers come from
-development runs and are not stored; `perf/results.json` holds the headed run above.
+view (about 23k trades: 62,715 trades over 41 min) ran at 13–17 fps in headless Chromium across two
+development runs. In the run with per-layer timing, the overlay took 18.5 ms at p50 and 111 ms at p95.
+The overlay now switches level of detail above 3,000 visible trades: it draws one VWAP marker per pixel
+column per side, sized by volume, and the HUD shows which mode is active. The same headless run then
+reached 60 fps with an overlay p95 of 0.9 ms. These headless numbers come from development runs and
+are not stored.
 
 ## Tests
 
@@ -255,7 +311,9 @@ development runs and are not stored; `perf/results.json` holds the headed run ab
   - paging under `prefers-reduced-motion`;
   - no page errors.
 
-  All 14 checks pass. It also writes `docs/screenshot-replay.png` and `docs/screenshot-stale.png`.
+  The run also checks the first-load intro overlay (shown once, dismissible) and the 390 px layout
+  (desktop note shown, no horizontal scroll). All 17 checks pass. It writes
+  `docs/screenshot-replay.png`, `docs/screenshot-stale.png` and `docs/screenshot-390.png`.
 
 ![Stale state: worker stalled for 3 s at 10×](docs/screenshot-stale.png)
 

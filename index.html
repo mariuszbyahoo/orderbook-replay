@@ -18,6 +18,7 @@
       <label class="live-toggle"><input id="live" type="checkbox" /> Live (Binance)</label>
     </header>
 
+    <p class="narrow-note" role="note">Best viewed on a desktop-width screen: the views are dense by design.</p>
     <main class="grid">
       <section class="panel heat" aria-label="Depth heatmap: price by time, liquidity intensity">
         <div class="panel-title">
@@ -95,8 +96,16 @@
       </section>
     </main>
 
-    <dialog id="help">
-      <h2>Keyboard</h2>
+    <dialog id="help" aria-labelledby="helpTitle">
+      <h2 id="helpTitle">What you're looking at</h2>
+      <p class="intro">
+        A replay of a real BTCUSDT order book (Binance L2 data: 41 min recorded 2026-11-24), drawn by hand with Canvas
+        2D and SVG. <b>Heatmap</b>: resting liquidity by price over time (blue = bids, orange = asks). <b>Ladder</b>:
+        the book at the playhead. <b>Mid &amp; spread</b>: every value shown with its sample count and min/max. The
+        top-right badge says how old the data on screen is and turns <b>STALE</b> when it is too old. The ◆ markers come
+        from a deliberately simple, illustrative strategy, not a real one.
+      </p>
+      <h3>Keyboard</h3>
       <table>
         <tr>
           <td><kbd>Space</kbd></td>
@@ -144,7 +153,7 @@
         </tr>
       </table>
       <p class="dim small">Heatmap: wheel = zoom time, Shift+wheel = zoom price, drag = pan.</p>
-      <form method="dialog"><button>Close</button></form>
+      <form method="dialog"><button autofocus>Got it</button></form>
     </dialog>
 
     <footer class="foot dim small" id="foot"></footer>

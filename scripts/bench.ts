@@ -61,6 +61,10 @@ const doc = {
   errors,
   result,
 };
+if (!(result as { viewportUnchanged?: boolean }).viewportUnchanged) {
+  console.error('INVALID RUN: the viewport changed during measurement (user input on the headed window?)');
+  process.exit(2);
+}
 await mkdir('perf', { recursive: true });
 await writeFile(values.out!, JSON.stringify(doc, null, 2) + '\n');
 console.log(JSON.stringify(doc, null, 2));

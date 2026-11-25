@@ -315,15 +315,36 @@ function setLive(on: boolean): void {
 liveBox.onchange = () => setLive(liveBox.checked);
 const help = $<HTMLDialogElement>('help');
 $('bHelp').onclick = () => help.showModal();
+// First visit: show the "What you're looking at" overlay once. Skipped in benchmark mode or with ?intro=0.
+// Static dialog, no animation, so prefers-reduced-motion needs nothing extra here.
+const INTRO_KEY = 'obr.introSeen';
+const introWanted = params.get('intro') !== '0' && !BENCH_S;
+let introSeen = false;
+try {
+  introSeen = localStorage.getItem(INTRO_KEY) === '1';
+} catch {
+  /* storage blocked: show it every time */
+}
+if (introWanted && !introSeen) help.showModal();
+help.addEventListener('close', () => {
+  try {
+    localStorage.setItem(INTRO_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+});
 
 function zoomTime(f: number): void {
+  if (BENCH_S) return; // benchmark viewport is fixed: user input must not change what is measured
   view.windowMs = Math.max(10_000, Math.min(4 * 3600_000, view.windowMs * f));
 }
 function zoomPrice(f: number): void {
+  if (BENCH_S) return;
   view.halfTicks = Math.max(200, Math.min(200_000, view.halfTicks * f));
 }
 
 document.addEventListener('keydown', (e) => {
+  if (BENCH_S) return; // no user input during a benchmark run
   const tag = (e.target as HTMLElement).tagName;
   if (tag === 'SELECT' || tag === 'INPUT') {
     if (e.key !== ' ') return;
@@ -398,6 +419,7 @@ const scrubTo = (e: PointerEvent): void => {
   setFollow(true);
 };
 tl.addEventListener('pointerdown', (e) => {
+  if (BENCH_S) return;
   if (history.mode === 'live') return;
   scrubbing = true;
   tl.setPointerCapture(e.pointerId);
@@ -420,6 +442,7 @@ over.addEventListener(
 );
 let drag: { x: number; y: number; t1: number; c: number } | null = null;
 over.addEventListener('pointerdown', (e) => {
+  if (BENCH_S) return;
   drag = { x: e.clientX, y: e.clientY, t1: view.t1, c: view.center };
   over.setPointerCapture(e.pointerId);
 });
@@ -455,6 +478,7 @@ function startBench(): void {
   const evs: number[] = [];
   let tStart = 0;
   let last = 0;
+  let viewAtStart = '';
   hudOn = true;
   // wide, fixed viewport so the heatmap blits several hundred thousand cells per frame
   view.windowMs = Number(params.get('benchWindowMin') ?? 15) * 60_000;
@@ -469,6 +493,7 @@ function startBench(): void {
     sample(ts: number): void {
       if (performance.now() < warm) return;
       if (!tStart) {
+        viewAtStart = `${view.windowMs}|${view.halfTicks}|${view.follow}`;
         tStart = ts;
         last = ts;
         lagMs.clear();
@@ -505,6 +530,7 @@ function startBench(): void {
             halfTicks: view.halfTicks,
           },
           reducedMotion: reducedMotion.matches,
+          viewportUnchanged: viewAtStart === `${view.windowMs}|${view.halfTicks}|${view.follow}`,
           userAgent: navigator.userAgent,
           info: history.info,
         };

@@ -1,0 +1,100 @@
+{
+  "what": "All live-mode data-age runs on 2026-11-25 (headed Chromium 159, Apple M4, production build). Kept so the published run is not cherry-picked.",
+  "runs": [
+    {
+      "run": 1,
+      "measuredAt": "2026-11-25T14:14:41.599Z",
+      "frames": 3601,
+      "staleFrames": 704,
+      "dataAgeMs": {
+        "n": 3601,
+        "p50": 542,
+        "p95": 2536.8,
+        "p99": 3847.5,
+        "max": 4330.2
+      },
+      "binanceRestRttMs": {
+        "n": 10,
+        "p50": 291.0,
+        "p95": 387.5,
+        "p99": 397.8,
+        "max": 400.4
+      },
+      "note": "no concurrent baseline"
+    },
+    {
+      "run": 2,
+      "measuredAt": "2026-11-25T14:16:05.052Z",
+      "frames": 3600,
+      "staleFrames": 1212,
+      "dataAgeMs": {
+        "n": 3600,
+        "p50": 918.1,
+        "p95": 7692.4,
+        "p99": 8245.8,
+        "max": 8783.4
+      },
+      "binanceRestRttMs": {
+        "n": 10,
+        "p50": 276.5,
+        "p95": 454.6,
+        "p99": 507.7,
+        "max": 521.0
+      },
+      "note": "no concurrent baseline; a separate Node-only check ~2 min later showed depth age p50 242 / p95 292 / max 555 ms"
+    },
+    {
+      "run": 3,
+      "measuredAt": "2026-11-25T14:20:41.182Z",
+      "frames": 3600,
+      "staleFrames": 0,
+      "dataAgeMs": {
+        "n": 3600,
+        "p50": 247.3,
+        "p95": 298.4,
+        "p99": 330.7,
+        "max": 594.1
+      },
+      "binanceRestRttMs": {
+        "n": 10,
+        "p50": 289.6,
+        "p95": 429.7,
+        "p99": 462.0,
+        "max": 470.1
+      },
+      "note": "concurrent Node baseline (separate process, depth+trade): depth age p50 214 / p95 246 / max 496 ms"
+    },
+    {
+      "run": 4,
+      "measuredAt": "2026-11-25T14:23:48.483Z",
+      "frames": 3601,
+      "staleFrames": 146,
+      "dataAgeMs": {
+        "p50": 492.0,
+        "p95": 1265.0,
+        "p99": 2289.5,
+        "max": 2889.9
+      },
+      "nodeBaselineDepthAgeMs": {
+        "n": 573,
+        "p50": 260.5,
+        "p95": 315.5,
+        "p99": 467.2,
+        "max": 783.5
+      },
+      "binanceRestRttMs": {
+        "p50": 276.0,
+        "p95": 416.9,
+        "p99": 454.5,
+        "max": 464.0
+      },
+      "note": "built-in concurrent Node baseline; stale breakdown not yet instrumented. Values transcribed from the run output (file was overwritten by run 5)."
+    },
+    {
+      "run": 5,
+      "measuredAt": "2026-11-25T14:25:31.666Z",
+      "file": "perf/live.json",
+      "note": "current perf/live.json (instrumented)"
+    }
+  ]
+}

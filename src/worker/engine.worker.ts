@@ -8,7 +8,7 @@ import { Analyzer, makeGrid, type Grid, type HistoryPatch } from '../engine/anal
 import { DepthSync, type DiffEvent } from '../engine/binanceSync';
 import { OrderBook, priceScale, type PriceScale } from '../engine/orderbook';
 import { prepass, type Prepass } from '../engine/prepass';
-import { EV_TRADE, loadSession, type Session } from '../engine/session';
+import { EV_SNAP, EV_TRADE, loadSession, type Session } from '../engine/session';
 import { imbalance } from '../engine/strategy';
 import { rasterToRGBA } from '../render/palette';
 import {
@@ -64,6 +64,8 @@ let mode: 'replay' | 'live' = 'replay';
 
 interface Replay {
   s: Session;
+  /** time of the first snapshot: before it there is no book, so the replay starts here */
+  start: number;
   pp: Prepass;
   instrument: InstrumentInfo;
   info: Record<string, string | number>;
@@ -112,7 +114,7 @@ function sendReplayReset(): void {
       instrument: rp.instrument,
       grid: pp.grid,
       capacity: pp.patch.ncols,
-      start: s.startTime,
+      start: rp.start,
       end: s.endTime,
       history,
       info: rp.info,
@@ -141,8 +143,11 @@ async function load(url: string): Promise<void> {
   const pp = prepass(s);
   const meta = s.meta;
   const qtyDecimals = meta ? priceScale(meta.stepSize).decimals : 5;
+  let firstSnap = 0;
+  while (firstSnap < s.length && s.kind[firstSnap] !== EV_SNAP) firstSnap++;
   rp = {
     s,
+    start: firstSnap < s.length ? s.time[firstSnap]! : s.startTime,
     pp,
     instrument: {
       symbol: meta?.symbol ?? '?',
@@ -165,7 +170,7 @@ async function load(url: string): Promise<void> {
       recordedAt: meta?.startedAt ?? 0,
     },
   };
-  playT = s.startTime;
+  playT = rp.start;
   pp.engine.seek(playT);
   sendReplayReset();
   dirty = true;
@@ -180,7 +185,7 @@ function replayFrame(): void {
     playT += (now - lastWall) * speed;
     if (playT >= rp.s.endTime) {
       if (bench) {
-        playT = rp.s.startTime;
+        playT = rp.start;
         e.seek(playT);
       } else {
         playT = rp.s.endTime;
@@ -239,7 +244,7 @@ function step(unit: StepUnit, dir: 1 | -1): void {
     playT = e.time;
   } else {
     const d = unit === '1s' ? 1000 : 100;
-    playT = Math.max(rp.s.startTime, Math.min(rp.s.endTime, playT + d * dir));
+    playT = Math.max(rp.start, Math.min(rp.s.endTime, playT + d * dir));
     e.seek(playT);
   }
   dirty = true;
@@ -507,7 +512,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
       break;
     case 'play':
       if (rp && playT >= rp.s.endTime) {
-        playT = rp.s.startTime;
+        playT = rp.start;
         rp.pp.engine.seek(playT);
       }
       playing = true;
@@ -527,7 +532,7 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
       break;
     case 'seek':
       if (rp) {
-        playT = Math.max(rp.s.startTime, Math.min(rp.s.endTime, m.t));
+        playT = Math.max(rp.start, Math.min(rp.s.endTime, m.t));
         rp.pp.engine.seek(playT);
         dirty = true;
       }

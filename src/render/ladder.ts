@@ -124,7 +124,11 @@ export class Ladder {
       ctx.fillStyle = '#000';
       ctx.textAlign = 'center';
       ctx.font = `bold ${13 * dpr}px ui-sans-serif, system-ui, sans-serif`;
-      ctx.fillText('BOOK INVALID — gap, awaiting resync', W / 2, H / 2);
+      ctx.fillText(
+        f.inGap ? 'BOOK INVALID — gap, awaiting resync' : 'NO BOOK YET — waiting for snapshot',
+        W / 2,
+        H / 2,
+      );
     }
   }
 }

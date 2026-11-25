@@ -240,6 +240,8 @@ body.is-stale .heat .stack {
   font-variant-numeric: tabular-nums;
   white-space: pre;
   pointer-events: none;
+  max-width: calc(100% - 12px);
+  overflow: hidden;
 }
 .hud[hidden] {
   display: none;
@@ -318,6 +320,7 @@ td {
 
 @media (max-width: 900px) {
   .grid {
+    flex: none;
     grid-template-columns: 1fr;
     grid-template-rows: 420px 420px 220px auto auto;
     grid-template-areas: 'heat' 'ladder' 'mid' 'strat' 'controls';
@@ -325,11 +328,39 @@ td {
   .panel-title {
     white-space: normal;
   }
+  .hud {
+    font-size: 9.5px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+dialog {
+  max-width: min(640px, calc(100vw - 32px));
+}
+dialog .intro {
+  line-height: 1.5;
+}
+dialog h3 {
+  font-size: 13px;
+  margin: 14px 0 6px;
+}
+.narrow-note {
+  display: none;
+  margin: 8px 8px 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  background: var(--panel);
+}
+@media (max-width: 700px) {
+  .narrow-note {
+    display: block;
   }
 }

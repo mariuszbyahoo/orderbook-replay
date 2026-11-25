@@ -48,6 +48,14 @@ try {
   await page.goto('http://127.0.0.1:4175/p/orderbook-replay/');
   await page.waitForFunction(() => (window as unknown as { __probe: Probe }).__probe.ready, null, { timeout: 60_000 });
   await page.waitForTimeout(300);
+  const introOpen = await page.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open);
+  await page.keyboard.press('Escape');
+  const introClosed = !(await page.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open));
+  check(
+    'intro overlay on first load, dismissible (Esc)',
+    introOpen && introClosed,
+    `open=${introOpen}, closed after Esc=${introClosed}`,
+  );
   const s0 = await probe(page);
   check('load', s0.ready && s0.now > 0, `ready, playhead ${new Date(s0.now).toISOString()}`);
 
@@ -147,6 +155,25 @@ try {
     `${distinct} distinct window positions over 1 s at 5x`,
   );
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+  // intro is remembered (localStorage) across reloads
+  await page.reload();
+  await page.waitForFunction(() => (window as unknown as { __probe: Probe }).__probe.ready, null, { timeout: 60_000 });
+  const introAgain = await page.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open);
+  check('intro not shown again after dismissal', !introAgain, `open=${introAgain}`);
+
+  // narrow screens get a clear note instead of a silently cramped layout
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(300);
+  const noteVisible = await page.locator('.narrow-note').isVisible();
+  const hScroll = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  check(
+    '390 px: desktop note visible, no horizontal scroll',
+    noteVisible && !hScroll,
+    `note=${noteVisible}, hScroll=${hScroll}`,
+  );
+  await page.screenshot({ path: 'docs/screenshot-390.png', fullPage: false });
+  await page.setViewportSize({ width: 1600, height: 1000 });
 
   check('no page errors', errors.length === 0, errors.join(' | ') || 'none');
 } catch (e) {

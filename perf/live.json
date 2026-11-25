@@ -1,0 +1,67 @@
+{
+  "measuredAt": "2026-11-25T14:25:31.666Z",
+  "what": "on-screen data age in live mode, sampled once per rendered frame (see scripts/bench-live.ts header)",
+  "browser": {
+    "name": "Chromium (Playwright)",
+    "version": "159.0.8154.6",
+    "mode": "headed"
+  },
+  "durationS": 60,
+  "frames": 3601,
+  "staleFrames": 0,
+  "staleBreakdown": {
+    "bookInvalid": 0,
+    "noFramesFromWorker": 0,
+    "newestEventTooOld": 0
+  },
+  "gapsDuringRun": 0,
+  "workerToRenderMs": {
+    "n": 3601,
+    "p50": 10.10009765625,
+    "p95": 17.5,
+    "p99": 18.699951171875,
+    "max": 20.2001953125,
+    "mean": 10.063445782204596
+  },
+  "workerNowMinusLastEventMs": {
+    "n": 3601,
+    "p50": 333.5,
+    "p95": 465.5,
+    "p99": 934.5,
+    "max": 1346.5,
+    "mean": 351.8910024993057
+  },
+  "mainFrameMs": {
+    "n": 3600,
+    "p50": 16.69999999999709,
+    "p95": 17,
+    "p99": 17.599999999998545,
+    "max": 17.80000000000291,
+    "mean": 16.666611111110527
+  },
+  "dataAgeMs": {
+    "n": 3601,
+    "p50": 346.60009765625,
+    "p95": 480.89990234375,
+    "p99": 942.199951171875,
+    "max": 1354.199951171875,
+    "mean": 361.95300438734466
+  },
+  "binanceRestRttMs": {
+    "n": 10,
+    "p50": 282.2048335000002,
+    "p95": 408.2536999999999,
+    "p99": 430.24574,
+    "max": 435.74375,
+    "mean": 304.9354084000001
+  },
+  "nodeBaselineDepthAgeMs": {
+    "n": 571,
+    "p50": 255,
+    "p95": 305,
+    "p99": 382.4999999999998,
+    "max": 785,
+    "mean": 255.24868651488617
+  },
+  "errors": []
+}
