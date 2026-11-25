@@ -315,6 +315,7 @@ function setLive(on: boolean): void {
 liveBox.onchange = () => setLive(liveBox.checked);
 const help = $<HTMLDialogElement>('help');
 $('bHelp').onclick = () => help.showModal();
+$('helpClose').onclick = () => help.close();
 // First visit: show the "What you're looking at" overlay once. Skipped in benchmark mode or with ?intro=0.
 // Static dialog, no animation, so prefers-reduced-motion needs nothing extra here.
 const INTRO_KEY = 'obr.introSeen';

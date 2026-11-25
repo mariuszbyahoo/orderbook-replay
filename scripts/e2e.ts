@@ -136,7 +136,9 @@ try {
   await page.keyboard.press('?');
   const open = await page.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open);
   check('help dialog (?)', open, 'opened');
-  await page.keyboard.press('Escape');
+  await page.locator('#helpClose').click(); // the button path (Esc is tested above)
+  const closedByButton = !(await page.locator('dialog#help').evaluate((d) => (d as HTMLDialogElement).open));
+  check('help dialog closes via its button', closedByButton, `closed=${closedByButton}`);
 
   // prefers-reduced-motion: the window pages in steps instead of scrolling every frame
   await page.emulateMedia({ reducedMotion: 'reduce' });

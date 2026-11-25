@@ -153,7 +153,8 @@
         </tr>
       </table>
       <p class="dim small">Heatmap: wheel = zoom time, Shift+wheel = zoom price, drag = pan.</p>
-      <form method="dialog"><button autofocus>Got it</button></form>
+      <!-- plain button, not <form method="dialog">: sandboxed iframes without allow-forms block that submit -->
+      <button id="helpClose" type="button" autofocus>Got it</button>
     </dialog>
 
     <footer class="foot dim small" id="foot"></footer>
